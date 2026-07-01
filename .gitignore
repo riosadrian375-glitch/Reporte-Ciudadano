@@ -1,0 +1,8 @@
+config/api_keys.php
+uploads/images/*
+uploads/videos/*
+!uploads/images/.gitkeep
+!uploads/videos/.gitkeep
+*.log
+.DS_Store
+Thumbs.db
