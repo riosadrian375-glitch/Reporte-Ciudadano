@@ -1,72 +1,20 @@
 <?php
 
-require_once dirname(__DIR__) . '/config/app.php';
+use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 
-$view = isset($_GET['view']) ? preg_replace('/[^a-zA-Z0-9_\-\/]/', '', $_GET['view']) : 'feed';
+define('LARAVEL_START', microtime(true));
 
-$publicRoutes = ['login', 'register'];
-$allowedViews = [
-    'feed', 'reporte/detalle', 'reporte/crear', 'reporte/editar',
-    'mapa', 'emergencias',
-    'admin/dashboard', 'admin/asignar', 'admin/reportes', 'admin/alertas',
-    'operador/dashboard', 'operador/mis-reportes',
-    'sistema/panel', 'sistema/usuarios',
-    'admin_dashboard', 'operador_dashboard', 'ciudadano_dashboard', 'sistema_dashboard',
-    'notificaciones', 'perfil', 'guardados', 'mis-reportes',
-];
-
-// Rutas públicas (login y register)
-if (in_array($view, $publicRoutes)) {
-    $file = dirname(__DIR__) . '/src/views/' . $view . '.php';
-    if (file_exists($file)) {
-        require_once $file;
-    } else {
-        require_once dirname(__DIR__) . '/src/views/login.php';
-    }
-    exit;
+// Determine if the application is in maintenance mode...
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
 }
 
-// API va ANTES de verificar login, porque tiene sus propias validaciones internas
-if ($view === 'api') {
-    require_once dirname(__DIR__) . '/src/controllers/api.php';
-    exit;
-}
+// Register the Composer autoloader...
+require __DIR__.'/../vendor/autoload.php';
 
-// A partir de aquí sí se requiere login
-redirigirSiNoLogueado();
+// Bootstrap Laravel and handle the request...
+/** @var Application $app */
+$app = require_once __DIR__.'/../bootstrap/app.php';
 
-if ($view === 'logout') {
-    session_destroy();
-    header('Location: ' . SITE_URL . '/index.php?view=login');
-    exit;
-}
-
-$rolesPorVista = [
-    'admin/dashboard' => 'admin_municipal',
-    'admin_dashboard' => 'admin_municipal',
-    'operador/dashboard' => 'operador',
-    'operador_dashboard' => 'operador',
-    'ciudadano_dashboard' => 'ciudadano',
-    'sistema/panel' => 'admin_sistema',
-    'sistema_dashboard' => 'admin_sistema',
-];
-if (isset($rolesPorVista[$view]) && !esRol($rolesPorVista[$view])) {
-    header('Location: ' . SITE_URL . '/index.php?view=' . vistaPrincipalPorRol());
-    exit;
-}
-
-$viewFile = dirname(__DIR__) . '/src/views/' . $view . '.php';
-if (!file_exists($viewFile) && !in_array($view, $allowedViews)) {
-    $view = 'feed';
-    $viewFile = dirname(__DIR__) . '/src/views/feed.php';
-}
-
-require_once dirname(__DIR__) . '/src/views/layouts/header.php';
-
-if (file_exists($viewFile)) {
-    require_once $viewFile;
-} else {
-    echo '<main class="container"><p>Vista no encontrada.</p></main>';
-}
-
-require_once dirname(__DIR__) . '/src/views/layouts/footer.php';
+$app->handleRequest(Request::capture());
